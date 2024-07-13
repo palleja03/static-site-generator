@@ -1,6 +1,6 @@
 import unittest
 
-from htmlnode import HTMLNode, LeafNode
+from htmlnode import HTMLNode, LeafNode, ParentNode
 
 
 class TestHTMLNode(unittest.TestCase):
@@ -59,5 +59,98 @@ class TestLeafNode(unittest.TestCase):
     def test_leaf_node_no_value_raises_error(self):
         with self.assertRaises(ValueError) as context:
             LeafNode(tag="p", value=None)
-            
         self.assertEqual(str(context.exception), "LeafNode requires a non-empty value.")
+
+
+class TestParentNode(unittest.TestCase): 
+    def test_eq(self):
+        node = ParentNode(
+            "p",
+            [
+                LeafNode("b", "Bold text"),
+                LeafNode(None, "Normal text"),
+                LeafNode("i", "italic text"),
+                LeafNode(None, "Normal text"),
+            ],
+        )
+
+        node2 = ParentNode(
+            "p",
+            [
+                LeafNode("b", "Bold text"),
+                LeafNode(None, "Normal text"),
+                LeafNode("i", "italic text"),
+                LeafNode(None, "Normal text"),
+            ],
+        )
+
+        self.assertEqual(node, node2)
+
+    def test_non_nested_to_html(self):
+        node = ParentNode(
+            "p",
+            [
+                LeafNode("b", "Bold text"),
+                LeafNode(None, "Normal text"),
+                LeafNode("i", "italic text"),
+                LeafNode(None, "Normal text"),
+            ],
+        )
+
+        expected_result = "<p><b>Bold text</b>Normal text<i>italic text</i>Normal text</p>"
+        self.assertEqual(node.to_html(), expected_result)
+
+    def test_nested_to_html(self):
+        inner_node = ParentNode(
+            "p",
+            [
+                LeafNode("b", "Bold text"),
+                LeafNode(None, "Normal text"),
+                LeafNode("i", "italic text"),
+                LeafNode(None, "Normal text"),
+            ],
+        )
+
+        parent = ParentNode(
+            "p",
+            [
+                LeafNode("b", "Begin:"),
+                inner_node,
+                LeafNode("i", "end.")
+            ]
+
+        )
+        inner_node_html = "<p><b>Bold text</b>Normal text<i>italic text</i>Normal text</p>"
+        expected_result = f"<p><b>Begin:</b>{inner_node_html}<i>end.</i></p>"
+
+        self.assertEqual(parent.to_html(), expected_result)
+
+    def test_props_in_to_html(self):
+        node = ParentNode(
+            "p",
+            [
+                LeafNode("b", "Bold text"),
+                LeafNode(None, "Normal text"),
+                LeafNode("i", "italic text"),
+                LeafNode(None, "Normal text"),
+            ],
+            {"href": "https://www.google.com"}
+        )
+        expected_result = """<p href="https://www.google.com"><b>Bold text</b>Normal text<i>italic text</i>Normal text</p>"""
+        self.assertEqual(node.to_html(), expected_result)
+
+    def test_none_children(self):
+        with self.assertRaises(ValueError) as context:
+            ParentNode("p", None)
+        self.assertEqual(str(context.exception), "PrentNode requires a non-empty children list.")
+
+
+    def test_empty_children_list(self):
+        with self.assertRaises(ValueError) as context:
+            ParentNode("p", [])
+        self.assertEqual(str(context.exception), "PrentNode requires a non-empty children list.")
+
+    def test_no_tag_to_html(self):
+        with self.assertRaises(ValueError) as context:
+            ParentNode(None, [LeafNode("b", "Bold text"),]).to_html()
+        self.assertEqual(str(context.exception), "PrentNode requires a non-empty tag to be converted to html.")
