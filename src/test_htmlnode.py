@@ -41,11 +41,6 @@ class TestLeafNode(unittest.TestCase):
         leaf2 = LeafNode(tag="p", value="This is a paragraph of text.")
         self.assertEqual(leaf, leaf2)
 
-
-    def test_leaf_node_no_value_raises_error(self):
-        with self.assertRaises(ValueError):
-            LeafNode(value=None, tag="p")
-
     def test_leaf_node_no_tag_to_html(self):
         leaf = LeafNode(tag = "p", value="This is a paragraph of text.")
         expected_result = "<p>This is a paragraph of text.</p>"
@@ -56,10 +51,10 @@ class TestLeafNode(unittest.TestCase):
         expected_result = '<a href="https://www.google.com">Click me!</a>'
         self.assertEqual(leaf.to_html(), expected_result)
 
-    def test_leaf_node_no_value_raises_error(self):
+    def test_leaf_node_no_value_to_html(self):
         with self.assertRaises(ValueError) as context:
-            LeafNode(tag="p", value=None)
-        self.assertEqual(str(context.exception), "LeafNode requires a non-empty value.")
+            LeafNode(tag="p", value=None).to_html()
+        self.assertEqual(str(context.exception), "Invalid HTML: no value")
 
 
 class TestParentNode(unittest.TestCase): 
@@ -139,18 +134,10 @@ class TestParentNode(unittest.TestCase):
         expected_result = """<p href="https://www.google.com"><b>Bold text</b>Normal text<i>italic text</i>Normal text</p>"""
         self.assertEqual(node.to_html(), expected_result)
 
-    def test_none_children(self):
-        with self.assertRaises(ValueError) as context:
-            ParentNode("p", None)
-        self.assertEqual(str(context.exception), "PrentNode requires a non-empty children list.")
-
-
-    def test_empty_children_list(self):
-        with self.assertRaises(ValueError) as context:
-            ParentNode("p", [])
-        self.assertEqual(str(context.exception), "PrentNode requires a non-empty children list.")
-
     def test_no_tag_to_html(self):
         with self.assertRaises(ValueError) as context:
             ParentNode(None, [LeafNode("b", "Bold text"),]).to_html()
-        self.assertEqual(str(context.exception), "PrentNode requires a non-empty tag to be converted to html.")
+        self.assertEqual(str(context.exception), "Invalid HTML: no tag")
+
+if __name__ == "__main__":
+    unittest.main()
