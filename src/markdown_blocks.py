@@ -1,64 +1,42 @@
-from htmlnode import ParentNode
-from inline_markdown import text_to_textnodes
+import re
+from htmlnode import HTMLNode,LeafNode, ParentNode
 from textnode import text_node_to_html_node
+from inline_markdown import text_to_textnodes
+from functools import reduce
+
 
 block_type_paragraph = "paragraph"
 block_type_heading = "heading"
 block_type_code = "code"
 block_type_quote = "quote"
-block_type_olist = "ordered_list"
 block_type_ulist = "unordered_list"
-
+block_type_olist = "ordered_list"
 
 def markdown_to_blocks(markdown):
     blocks = markdown.split("\n\n")
-    filtered_blocks = []
-    for block in blocks:
-        if block == "":
-            continue
-        block = block.strip()
-        filtered_blocks.append(block)
+    filtered_blocks = [block.strip() for block in blocks if block != ""]
     return filtered_blocks
 
-
 def block_to_block_type(block):
-    lines = block.split("\n")
-
-    if (
-        block.startswith("# ")
-        or block.startswith("## ")
-        or block.startswith("### ")
-        or block.startswith("#### ")
-        or block.startswith("##### ")
-        or block.startswith("###### ")
-    ):
+    block_lines = block.split("\n")
+    lines_quote_map = map(lambda line: re.match(r"^>", line), block_lines)
+    lines_unordered_list_map = map(lambda line: re.match(r"^\* |^- ", line), block_lines)
+    ordered_numbers = list(map(lambda x: str(x), range(1,len(block_lines) + 1)))
+    lines_ordered_list_tuples = list(map(lambda line: (line[0], re.match(r"^\d{1}\. ", line)), block_lines))
+    zipped_ordered_tuples = zip(ordered_numbers, lines_ordered_list_tuples)
+    lines_ordered_map = map(lambda row: row[0] == row[1][0] and row[1][1], zipped_ordered_tuples)
+    
+    if re.match(r"^#{1,6} ", block_lines[0]):
         return block_type_heading
-    if len(lines) > 1 and lines[0].startswith("```") and lines[-1].startswith("```"):
+    elif re.match(r"^```[\s\S]*```$", block, re.MULTILINE):
         return block_type_code
-    if block.startswith(">"):
-        for line in lines:
-            if not line.startswith(">"):
-                return block_type_paragraph
+    elif reduce(lambda a,b: a and b, lines_quote_map):
         return block_type_quote
-    if block.startswith("* "):
-        for line in lines:
-            if not line.startswith("* "):
-                return block_type_paragraph
+    elif reduce(lambda a,b: a and b, lines_unordered_list_map):
         return block_type_ulist
-    if block.startswith("- "):
-        for line in lines:
-            if not line.startswith("- "):
-                return block_type_paragraph
-        return block_type_ulist
-    if block.startswith("1. "):
-        i = 1
-        for line in lines:
-            if not line.startswith(f"{i}. "):
-                return block_type_paragraph
-            i += 1
+    elif reduce(lambda a,b: a and b, lines_ordered_map):
         return block_type_olist
     return block_type_paragraph
-
 
 def markdown_to_html_node(markdown):
     blocks = markdown_to_blocks(markdown)
@@ -67,6 +45,9 @@ def markdown_to_html_node(markdown):
         html_node = block_to_html_node(block)
         children.append(html_node)
     return ParentNode("div", children, None)
+
+def text_to_children(text):
+    return list(map(text_node_to_html_node,text_to_textnodes(text)))
 
 
 def block_to_html_node(block):
@@ -86,13 +67,7 @@ def block_to_html_node(block):
     raise ValueError("Invalid block type")
 
 
-def text_to_children(text):
-    text_nodes = text_to_textnodes(text)
-    children = []
-    for text_node in text_nodes:
-        html_node = text_node_to_html_node(text_node)
-        children.append(html_node)
-    return children
+
 
 
 def paragraph_to_html_node(block):
